@@ -23,7 +23,7 @@ app.use(express.json());
 app.use(cookieParser());
 const allowedOrigins = [
   "http://localhost:5173",
-  process.env.CLIENT_URL, // Injected via deployment environment variables
+  process.env.CLIENT_URL, 
 ].filter(Boolean);
 app.use(
   cors({
