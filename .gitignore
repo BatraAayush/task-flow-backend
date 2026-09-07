@@ -1,2 +1,42 @@
-.env*
-node_modules
+# Dependencies
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
+# TypeScript / Build Output
+dist/
+build/
+*.tsbuildinfo
+
+# Logs & Runtime Data
+logs/
+*.log
+
+# Editor & OS Metadata
+.DS_Store
+Thumbs.db
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing & Coverage
+coverage/
+.nyc_output/
+
+# Temp Files
+tmp/
+temp/

@@ -35,7 +35,7 @@ export const getTasks = asyncHandler(
     const total = await Task.countDocuments(query);
     const tasks = await Task.find(query)
       .populate("assignedTo", "name email avatarUrl")
-      .populate("activityLogs.user", "name email")
+      .populate("activityLogs.user", "name email avatarUrl")
       .sort({ orderIndex: 1, createdAt: -1 })
       .skip((p - 1) * l)
       .limit(l);
@@ -69,6 +69,7 @@ export const createTask = asyncHandler(
       assignedTo,
       dueDate,
     } = req.body;
+
     const count = await Task.countDocuments({ boardId });
     const task = await Task.create({
       title,
@@ -88,11 +89,12 @@ export const createTask = asyncHandler(
         },
       ],
     });
-    const popuplated = await task.populate(
-      "assignedTo",
-      "name email avatarUrl",
-    );
-    return sendResponse(res, popuplated, "Task created successfully", 201);
+
+    const populated = await Task.findById(task._id)
+      .populate("assignedTo", "name email avatarUrl")
+      .populate("activityLogs.user", "name email avatarUrl");
+
+    return sendResponse(res, populated, "Task created successfully", 201);
   },
 );
 
@@ -100,6 +102,7 @@ export const updateTaskStatusAndOrder = asyncHandler(
   async (req: ProjectRequest, res: Response) => {
     const { taskId } = req.params;
     const { status, boardId, orderIndex } = req.body;
+    const userName = req.user!.name || "Member";
 
     const task = await Task.findById(taskId);
     if (!task) {
@@ -107,24 +110,41 @@ export const updateTaskStatusAndOrder = asyncHandler(
     }
 
     const oldStatus = task.status;
+    const oldBoardId = task.boardId?.toString();
+    const oldOrder = task.orderIndex;
+
+    const isStatusChanged = status && status !== oldStatus;
+    const isBoardChanged = boardId && boardId.toString() !== oldBoardId;
+    const isOrderChanged = orderIndex !== undefined && orderIndex !== oldOrder;
+
+    // Apply updates
     if (status) task.status = status;
     if (boardId) task.boardId = boardId;
     if (orderIndex !== undefined) task.orderIndex = orderIndex;
 
-    if (status && status !== oldStatus) {
+    // Log status or column move
+    if (isStatusChanged || isBoardChanged) {
       task.activityLogs.push({
         user: req.user!._id as any,
-        action: `Moved status from "${oldStatus}" to "${status} by ${req.user!.name}`,
+        action: `Moved status from "${oldStatus}" to "${status || oldStatus}" by ${userName}`,
+        timestamp: new Date(),
+      });
+    } else if (isOrderChanged) {
+      // Log drag-and-drop reorder within the same column
+      task.activityLogs.push({
+        user: req.user!._id as any,
+        action: `Reordered in column (position ${oldOrder + 1} → ${orderIndex + 1}) by ${userName}`,
         timestamp: new Date(),
       });
     }
 
     await task.save();
-    const popuplated = await task.populate(
-      "assignedTo",
-      "name email avatarUrl",
-    );
-    return sendResponse(res, popuplated, "Task status/position updated", 200);
+
+    const populated = await Task.findById(taskId)
+      .populate("assignedTo", "name email avatarUrl")
+      .populate("activityLogs.user", "name email avatarUrl");
+
+    return sendResponse(res, populated, "Task status/position updated", 200);
   },
 );
 
@@ -132,31 +152,68 @@ export const updateTask = asyncHandler(
   async (req: ProjectRequest, res: Response) => {
     const { taskId } = req.params;
     const updates = req.body;
+    const userId = req.user!._id;
+    const userName = req.user!.name || "Member";
 
     const task = await Task.findById(taskId);
     if (!task) {
       throw new ApiError(404, "Task not found");
     }
 
+    const changes: string[] = [];
+
+    // Title change
+    if (updates.title && updates.title !== task.title) {
+      changes.push(`renamed title to "${updates.title}"`);
+    }
+
+    // Priority change
+    if (updates.priority && updates.priority !== task.priority) {
+      changes.push(`changed priority from "${task.priority}" to "${updates.priority}"`);
+    }
+
+    // Due Date change
+    if (updates.dueDate !== undefined) {
+      const oldDue = task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : "none";
+      const newDue = updates.dueDate ? new Date(updates.dueDate).toISOString().split("T")[0] : "none";
+      if (oldDue !== newDue) {
+        changes.push(newDue === "none" ? "removed due date" : `set due date to ${newDue}`);
+      }
+    }
+
+    // Assignee change
     if (updates.assignedTo !== undefined) {
       const currentAssignedId = task.assignedTo ? task.assignedTo.toString() : null;
       const newAssignedId = updates.assignedTo ? String(updates.assignedTo) : null;
 
       if (currentAssignedId !== newAssignedId) {
-        task.activityLogs.push({
-          user: req.user!._id as any,
-          action: `Assigned user updated by ${req.user!.name}`,
-          timestamp: new Date(),
-        });
+        changes.push(newAssignedId ? "Reassigned task" : "unassigned task");
       }
     }
 
+    // Description change
+    if (updates.description !== undefined && updates.description !== task.description) {
+      changes.push("Updated description");
+    }
+
     Object.assign(task, updates);
+
+    if (changes.length > 0) {
+      task.activityLogs.push({
+        user: userId as any,
+        action: `${changes.join(", ")} by ${userName}`,
+        timestamp: new Date(),
+      });
+    }
+
     await task.save();
 
-    const populated = await task.populate("assignedTo", "name email avatarUrl");
+    const populated = await Task.findById(taskId)
+      .populate("assignedTo", "name email avatarUrl")
+      .populate("activityLogs.user", "name email avatarUrl");
+
     return sendResponse(res, populated, "Task updated successfully", 200);
-  }
+  },
 );
 
 export const deleteTask = asyncHandler(
