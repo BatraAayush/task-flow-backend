@@ -21,10 +21,9 @@ connectDB();
 
 app.use(express.json());
 app.use(cookieParser());
-const allowedOrigins = [
-  "http://localhost:5173",
-  process.env.CLIENT_URL, 
-].filter(Boolean);
+const allowedOrigins = ["http://localhost:5173", process.env.CLIENT_URL].filter(
+  Boolean,
+);
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -70,3 +69,5 @@ app.listen(PORT, () => {
   console.log(`Server runnuning on http://localhost:${PORT}`);
   console.log(`Health check at http://localhost:${PORT}/health`);
 });
+
+export default app;
