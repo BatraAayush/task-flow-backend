@@ -11,7 +11,7 @@ import { AuthenticatedRequest } from "../middleware/authGuard.js";
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "lax" as const,
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 
@@ -43,7 +43,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
       accessToken,
     },
     "User registered successfully",
-    201
+    201,
   );
 });
 
@@ -75,7 +75,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
       accessToken,
     },
     "Logged in successfully",
-    200
+    200,
   );
 });
 
@@ -88,7 +88,7 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
   try {
     const decoded = jwt.verify(
       incomingRefreshToken,
-      process.env.REFRESH_TOKEN_SECRET as string
+      process.env.REFRESH_TOKEN_SECRET as string,
     ) as { userId: string };
 
     const user = await User.findById(decoded.userId);
@@ -96,13 +96,16 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
       throw new ApiError(401, "Invalid refresh session");
     }
 
-    const isValid = await bcrypt.compare(incomingRefreshToken, user.refreshTokenHash);
+    const isValid = await bcrypt.compare(
+      incomingRefreshToken,
+      user.refreshTokenHash,
+    );
     if (!isValid) {
       throw new ApiError(401, "Refresh token reused or invalidated");
     }
 
     const { accessToken, refreshToken: newRefreshToken } = generateTokens(
-      user._id.toString()
+      user._id.toString(),
     );
 
     const saltRefresh = await bcrypt.genSalt(10);
@@ -118,7 +121,7 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
         user: { _id: user._id, name: user.name, email: user.email },
       },
       "Token refreshed successfully",
-      200
+      200,
     );
   } catch {
     throw new ApiError(401, "Expired or invalid refresh token");
@@ -134,7 +137,7 @@ export const logout = asyncHandler(
     }
     res.clearCookie("refreshToken", COOKIE_OPTIONS);
     return sendResponse(res, null, "Logged out successfully", 200);
-  }
+  },
 );
 
 export const getMe = asyncHandler(
@@ -144,5 +147,5 @@ export const getMe = asyncHandler(
       throw new ApiError(404, "User not found");
     }
     return sendResponse(res, user, "Current user retrieved", 200);
-  }
+  },
 );
