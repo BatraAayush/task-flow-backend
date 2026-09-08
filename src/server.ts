@@ -21,9 +21,11 @@ connectDB();
 
 app.use(express.json());
 app.use(cookieParser());
-const allowedOrigins = ["http://localhost:5173", process.env.CLIENT_URL].filter(
-  Boolean,
-);
+const allowedOrigins = [
+  "https://task-flow-ab.netlify.app/",
+  "http://localhost:5173",
+  process.env.CLIENT_URL,
+].filter(Boolean);
 app.use(
   cors({
     origin: (origin, callback) => {
