@@ -4,6 +4,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import Task from "../models/Task.js";
 import { sendResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
+import { formatSnakeToNormal } from "../helpers/stringHelper.js";
 
 export const getTasks = asyncHandler(
   async (req: ProjectRequest, res: Response) => {
@@ -126,7 +127,7 @@ export const updateTaskStatusAndOrder = asyncHandler(
     if (isStatusChanged || isBoardChanged) {
       task.activityLogs.push({
         user: req.user!._id as any,
-        action: `Moved status from "${oldStatus}" to "${status || oldStatus}" by ${userName}`,
+        action: `Moved status from ${formatSnakeToNormal(oldStatus)} to ${formatSnakeToNormal(status || oldStatus)} by ${userName}`,
         timestamp: new Date(),
       });
     } else if (isOrderChanged) {
@@ -169,22 +170,34 @@ export const updateTask = asyncHandler(
 
     // Priority change
     if (updates.priority && updates.priority !== task.priority) {
-      changes.push(`changed priority from "${task.priority}" to "${updates.priority}"`);
+      changes.push(
+        `changed priority from "${task.priority}" to "${updates.priority}"`,
+      );
     }
 
     // Due Date change
     if (updates.dueDate !== undefined) {
-      const oldDue = task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : "none";
-      const newDue = updates.dueDate ? new Date(updates.dueDate).toISOString().split("T")[0] : "none";
+      const oldDue = task.dueDate
+        ? new Date(task.dueDate).toISOString().split("T")[0]
+        : "none";
+      const newDue = updates.dueDate
+        ? new Date(updates.dueDate).toISOString().split("T")[0]
+        : "none";
       if (oldDue !== newDue) {
-        changes.push(newDue === "none" ? "removed due date" : `set due date to ${newDue}`);
+        changes.push(
+          newDue === "none" ? "removed due date" : `set due date to ${newDue}`,
+        );
       }
     }
 
     // Assignee change
     if (updates.assignedTo !== undefined) {
-      const currentAssignedId = task.assignedTo ? task.assignedTo.toString() : null;
-      const newAssignedId = updates.assignedTo ? String(updates.assignedTo) : null;
+      const currentAssignedId = task.assignedTo
+        ? task.assignedTo.toString()
+        : null;
+      const newAssignedId = updates.assignedTo
+        ? String(updates.assignedTo)
+        : null;
 
       if (currentAssignedId !== newAssignedId) {
         changes.push(newAssignedId ? "Reassigned task" : "unassigned task");
@@ -192,7 +205,10 @@ export const updateTask = asyncHandler(
     }
 
     // Description change
-    if (updates.description !== undefined && updates.description !== task.description) {
+    if (
+      updates.description !== undefined &&
+      updates.description !== task.description
+    ) {
       changes.push("Updated description");
     }
 
