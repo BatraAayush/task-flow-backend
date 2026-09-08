@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { CookieOptions, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
@@ -8,10 +8,13 @@ import { generateTokens } from "../utils/jwt.js";
 import { sendResponse } from "../utils/ApiResponse.js";
 import { AuthenticatedRequest } from "../middleware/authGuard.js";
 
-const COOKIE_OPTIONS = {
+const isProduction = process.env.NODE_ENV === "production";
+
+const COOKIE_OPTIONS: CookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  secure: isProduction,
+  sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
+  path: "/",
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 
