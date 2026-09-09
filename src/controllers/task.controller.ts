@@ -165,13 +165,13 @@ export const updateTask = asyncHandler(
 
     // Title change
     if (updates.title && updates.title !== task.title) {
-      changes.push(`renamed title to "${updates.title}"`);
+      changes.push(`Renamed title to "${updates.title}"`);
     }
 
     // Priority change
     if (updates.priority && updates.priority !== task.priority) {
       changes.push(
-        `changed priority from "${task.priority}" to "${updates.priority}"`,
+        `Changed priority from "${task.priority}" to "${updates.priority}"`,
       );
     }
 
@@ -185,7 +185,7 @@ export const updateTask = asyncHandler(
         : "none";
       if (oldDue !== newDue) {
         changes.push(
-          newDue === "none" ? "removed due date" : `set due date to ${newDue}`,
+          newDue === "none" ? "Removed due date" : `Set due date to ${newDue}`,
         );
       }
     }
@@ -200,7 +200,7 @@ export const updateTask = asyncHandler(
         : null;
 
       if (currentAssignedId !== newAssignedId) {
-        changes.push(newAssignedId ? "Reassigned task" : "unassigned task");
+        changes.push(newAssignedId ? "Reassigned task" : "Unassigned task");
       }
     }
 
